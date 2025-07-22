@@ -5,7 +5,7 @@ app = FastAPI()
 
 @app.get("/")
 def read_root():
-    return {"Hello": "World"}
+    return {"This is Home Route"}
 
 @app.get("/v1")
 def read_api():
