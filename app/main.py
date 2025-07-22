@@ -7,11 +7,11 @@ app = FastAPI()
 def read_root():
     return {"This is Home Route"}
 
-@app.get("/v1")
+@app.get("/api/")
 def read_api():
     return {"message": "Hello from API version 1"}
 
-@app.get("/v1/health")
+@app.get("/api/health")
 def read_health():
     return {"status": "healthy"}
 
