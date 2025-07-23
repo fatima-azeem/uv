@@ -21,7 +21,7 @@ RUN python -m pip install --upgrade pip && \
 COPY . .
 
 # Expose the app port
-EXPOSE 8009
+EXPOSE 8001
 
 # Switch to non-privileged user
 # USER appuser
