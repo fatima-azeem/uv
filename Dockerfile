@@ -1,33 +1,40 @@
-# Use a build argument for Python version
+# === Stage 1: Build dependencies (heavy stuff)
 ARG PYTHON_VERSION=3.13.5
-FROM python:${PYTHON_VERSION}-slim as base
+FROM python:${PYTHON_VERSION}-slim as build
 
-# Environment variables
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    DEBIAN_FRONTEND=noninteractive
-
-# Set working directory
+ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /app
 
-# Install system dependencies in a single layer with cleanup
-RUN apt-get update && \
+# Use a faster Debian mirror (optional, adjust for your region)
+RUN sed -i 's|http://deb.debian.org|http://ftp.fr.debian.org|g' /etc/apt/sources.list && \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
         gcc \
         curl \
         libffi-dev && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Upgrade pip and install uv (split for better caching)
-RUN python -m pip install --upgrade pip
-RUN pip install uv
+# Upgrade pip and install uv globally
+RUN python -m pip install --upgrade pip && \
+    pip install --no-cache-dir uv
 
-# Copy project files last to maximize cache reuse
+# Copy project code for dependency resolution if needed
 COPY . .
 
-# Expose application port
+# === Stage 2: Final runtime image (slim + fast)
+FROM python:${PYTHON_VERSION}-slim as final
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+# Copy uv from builder stage (if needed)
+COPY --from=build /usr/local /usr/local
+COPY --from=build /app /app
+
+# Expose app port
 EXPOSE 8001
 
-# Run application with uv + uvicorn
+# CMD to run app
 CMD ["uv", "run", "uvicorn", "app.main:app", "--reload", "--port", "8001", "--host", "0.0.0.0"]
