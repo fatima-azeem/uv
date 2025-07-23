@@ -1,30 +1,33 @@
+# Use a build argument for Python version
 ARG PYTHON_VERSION=3.13.5
 FROM python:${PYTHON_VERSION}-slim as base
 
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+# Environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    DEBIAN_FRONTEND=noninteractive
 
+# Set working directory
 WORKDIR /app
 
-# System dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    curl \
-    libffi-dev \
-    && rm -rf /var/lib/apt/lists/*
+# Install system dependencies in a single layer with cleanup
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        gcc \
+        curl \
+        libffi-dev && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-# Install dependencies including uv and uvicorn
-RUN python -m pip install --upgrade pip && \
-    pip install uv
+# Upgrade pip and install uv (split for better caching)
+RUN python -m pip install --upgrade pip
+RUN pip install uv
 
-# Copy application code
+# Copy project files last to maximize cache reuse
 COPY . .
 
-# Expose the app port
+# Expose application port
 EXPOSE 8001
 
-# Switch to non-privileged user
-# USER appuser
-
-# Run the application
+# Run application with uv + uvicorn
 CMD ["uv", "run", "uvicorn", "app.main:app", "--reload", "--port", "8001", "--host", "0.0.0.0"]
